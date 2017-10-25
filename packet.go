@@ -23,6 +23,7 @@ var (
 	ErrInvalidPacketPrefix = errors.New("invalid prefix")
 	ErrMissingChecksum     = errors.New("missing checksum")
 	ErrIncorrectChecksum   = errors.New("incorrect checksum")
+	ErrInvalidPacket       = errors.New("invalid packet")
 )
 
 // ParsePacket parses one line of AIS data
@@ -49,15 +50,27 @@ func ParsePacket(rawPacket string) (*Packet, error) {
 
 	parts := strings.Split(innerMessage, ",")
 
+	fragCount, err := toInt(parts[1])
+	if err != nil {
+		return nil, ErrInvalidPacket
+	}
+	fragNo, err := toInt(parts[2])
+	if err != nil {
+		return nil, ErrInvalidPacket
+	}
+	fillBits, err := toInt(parts[6])
+	if err != nil {
+		return nil, ErrInvalidPacket
+	}
 	return &Packet{
 		Talker:     parts[0][0:2],
 		PacketType: parts[0][2:],
-		FragCount:  toInt(parts[1]),
-		FragNo:     toInt(parts[2]),
+		FragCount:  fragCount,
+		FragNo:     fragNo,
 		SeqId:      parts[3],
 		Channel:    parts[4],
 		Payload:    parts[5],
-		FillBits:   toInt(parts[6]),
+		FillBits:   fillBits,
 	}, nil
 }
 
@@ -72,4 +85,16 @@ func readChecksum(rawPacket string) (byte, error) {
 		panic(err)
 	}
 	return byte(checksum), nil
+}
+
+func calculateChecksum(s string) uint8 {
+	var checksum int32
+	for _, r := range s {
+		checksum ^= r
+	}
+	return uint8(checksum)
+}
+
+func toInt(s string) (int, error) {
+	return strconv.Atoi(s)
 }
