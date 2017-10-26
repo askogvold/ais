@@ -82,7 +82,7 @@ func readChecksum(rawPacket string) (byte, error) {
 	checksumN := rawPacket[l-2:]
 	checksum, err := strconv.ParseUint(checksumN, 16, 8)
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 	return byte(checksum), nil
 }
