@@ -53,3 +53,8 @@ func TestDecodePayload(t *testing.T) {
 	}
 	assert.EqualValues(t, expected2, q.Bytes)
 }
+
+func TestFailOnBogusCharacter(t *testing.T) {
+	_, err := ConvertPayload("13@nocPP0427vl<`JO2``gwj08RDæ", 0)
+	assert.EqualValues(t, ErrInvalidCharacter, err)
+}
