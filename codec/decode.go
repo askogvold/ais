@@ -37,9 +37,45 @@ func convertRune(r byte) byte {
 	}
 }
 
+func byteToRune(r byte) byte {
+	switch {
+	case r < 32:
+		return r + 64
+	case r < 64:
+		return r + 32
+	default:
+		return errByte
+	}
+}
+
 // Payload represents a payload converted to bytes.
 type Payload struct {
 	Bytes []byte
+}
+
+func (p *Payload) GetBits(From, Until int) []byte {
+	b0 := From / 8
+	nBits := Until - From
+	if nBits <= 0 {
+		return []byte{}
+	}
+	size := 1 + (nBits-1)/8
+	result := make([]byte, size)
+
+	leftShift := byte(From % 8)
+	rightShift := 8 - leftShift
+
+	dropLastBits := byte(8*size - nBits)
+
+	for i := 0; i < size-1; i++ {
+		result[i] = p.Bytes[b0+i]<<leftShift | (p.Bytes[b0+i+1] >> rightShift)
+	}
+
+	result[size-1] = ((p.Bytes[b0+size-1] >> dropLastBits) << dropLastBits) << leftShift
+
+	_ = leftShift
+
+	return result
 }
 
 type payloadBuilder struct {

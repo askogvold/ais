@@ -6,27 +6,30 @@ import (
 )
 
 const (
-	b101010   byte = 0x2A
+	b00101010 byte = 0x2A
 	b10101010 byte = 0xAA
+	b01010101 byte = b10101010 >> 1
+	b01010100 byte = b01010101 - 1
 	b10000000 byte = 0x80
 	b10100000 byte = 0xA0
+	b10101000 byte = 0xA8
 )
 
 func TestPayloadBuilder(t *testing.T) {
 	p := newPayloadBuilder()
-	p.insertSixBits(b101010)
-	assert.Equal(t, p.bytes[0], b101010<<2)
+	p.insertSixBits(b00101010)
+	assert.Equal(t, p.bytes[0], b00101010<<2)
 
-	p.insertSixBits(b101010)
+	p.insertSixBits(b00101010)
 	assert.Equal(t, p.bytes[0], b10101010)
 
 	assert.Equal(t, p.bytes[1], b10100000)
 
-	p.insertSixBits(b101010)
+	p.insertSixBits(b00101010)
 	assert.Equal(t, p.bytes[1], b10101010)
 	assert.Equal(t, p.bytes[2], b10000000)
 
-	p.insertSixBits(b101010)
+	p.insertSixBits(b00101010)
 	assert.Equal(t, p.bytes[2], b10101010)
 }
 
@@ -57,4 +60,27 @@ func TestDecodePayload(t *testing.T) {
 func TestFailOnBogusCharacter(t *testing.T) {
 	_, err := ConvertPayload("13@nocPP0427vl<`JO2``gwj08RDæ", 0)
 	assert.EqualValues(t, ErrInvalidCharacter, err)
+}
+
+func TestPayload_GetBits(t *testing.T) {
+	payload := &Payload{
+		Bytes: []byte{
+			b10101010,
+			b01010101,
+		},
+	}
+	assert.EqualValues(t, b10000000, payload.GetBits(0, 1)[0])
+	assert.EqualValues(t, b10000000, payload.GetBits(0, 2)[0])
+	assert.EqualValues(t, b10100000, payload.GetBits(0, 3)[0])
+	assert.EqualValues(t, b10100000, payload.GetBits(0, 4)[0])
+	assert.EqualValues(t, b10101000, payload.GetBits(0, 5)[0])
+	assert.EqualValues(t, b10101000, payload.GetBits(0, 6)[0])
+	assert.EqualValues(t, b10101010, payload.GetBits(0, 7)[0])
+	assert.EqualValues(t, b10101010, payload.GetBits(0, 8)[0])
+
+	assert.EqualValues(t, []byte{b01010100}, payload.GetBits(1, 9))
+	assert.EqualValues(t, []byte{b01010100 << 1}, payload.GetBits(2, 9))
+
+	assert.EqualValues(t, []byte{b01010101}, payload.GetBits(8, 16))
+	assert.EqualValues(t, payload.Bytes, payload.GetBits(0, 16))
 }
